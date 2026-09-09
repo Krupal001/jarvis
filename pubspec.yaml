@@ -44,6 +44,7 @@ dependencies:
   dio: ^5.11.1
   google_fonts: ^6.2.1
   flutter_accessibility_service: ^1.2.0
+  installed_apps: ^2.1.1
 
 dev_dependencies:
   flutter_test:
@@ -72,6 +73,7 @@ flutter:
     - assets/skills/send-sms/SKILL.md
     - assets/skills/send-whatsapp/SKILL.md
     - assets/skills/install-app/SKILL.md
+    - assets/skills/uninstall-app/SKILL.md
     - assets/Atom_Loader.json
 
   # An image asset can refer to one or more resolution-specific "variants", see

@@ -1,8 +1,10 @@
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_gemma_agent/flutter_gemma_agent.dart';
+import 'package:flutter_gemma_demo/agent/skills/uninstall_app_executor.dart';
 import 'package:flutter_gemma_demo/core/services/play_store_search_service.dart';
 import 'package:flutter_gemma_demo/core/services/sms_service.dart';
+import 'package:flutter_gemma_demo/core/services/uninstall_app_service.dart';
 import 'package:flutter_gemma_demo/core/services/whatsapp_service.dart';
 
 import 'skills/messaging_skill_executor.dart';
@@ -21,6 +23,7 @@ class AgentService {
     'assets/skills/send-sms/SKILL.md',
     'assets/skills/send-whatsapp/SKILL.md',
     'assets/skills/install-app/SKILL.md',
+    'assets/skills/uninstall-app/SKILL.md',
   ];
 
   Future<AgentSession> createSession(InferenceModel model) async {
@@ -46,12 +49,17 @@ class AgentService {
       playStoreSearchService: PlayStoreSearchService(),
     );
 
+    final uninstallAppExecutor = UninstallAppExecutor(
+      uninstallAppService: UninstallAppService(),
+    );
+
     return AgentSession.fromModel(
       model,
       registry: registry,
       executors: [
         messagingExecutor,
         installAppExecutor,
+        uninstallAppExecutor,
       ],
     );
   }
