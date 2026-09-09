@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">flutter_gemma_demo</string>
+
+    <string name="accessibility_service_description">
+        Allows the assistant to interact with supported application interfaces.
+    </string>
+
+</resources>
