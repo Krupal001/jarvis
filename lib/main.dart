@@ -46,7 +46,7 @@ class BootstrapScreen extends StatefulWidget {
 }
 
 class _BootstrapScreenState extends State<BootstrapScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin , WidgetsBindingObserver {
   double? _downloadProgress;
   String _status = 'Checking model...';
   String? _error;
@@ -56,19 +56,47 @@ class _BootstrapScreenState extends State<BootstrapScreen>
 
   @override
   void initState() {
+   
     super.initState();
+     WidgetsBinding.instance.addObserver(this);
     _logoController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
     _prepareModel();
+    _checkAccessibility();
+    
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _logoController.dispose();
     super.dispose();
+   
   }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkAccessibility();
+    }
+  }
+
+Future<void> _checkAccessibility() async {
+  final enabled =
+      await AutomationService.isAccessibilityEnabled();
+
+  if (!mounted) return;
+
+  if (!enabled) {
+    _showPermissionRequest();
+  } else {
+    setState(() {
+      _needsPermission = false;
+    });
+  }
+}
 
   Future<void> _prepareModel() async {
     const filename = 'gemma-4-E2B-it.litertlm';
@@ -101,7 +129,9 @@ class _BootstrapScreenState extends State<BootstrapScreen>
         _ready = true;
         _status = 'Ready';
       });
-      _showPermissionRequest();
+    
+     
+      
     } catch (e) {
       if (!mounted) return;
       setState(() {

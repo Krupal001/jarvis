@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_gemma_agent/flutter_gemma_agent.dart';
 import 'package:flutter_gemma_demo/core/services/automation_service.dart';
 import 'package:flutter_gemma_demo/core/services/play_store_search_service.dart';
@@ -84,6 +86,51 @@ class InstallAppExecutor implements SkillExecutor {
       return null;
     }
 
+    // If the model passed a JSON object like {app_name: spotify} or
+    // {"app_name": "spotify"}, extract the value.
+    if (value.startsWith('{') && value.endsWith('}')) {
+      // Try parsing as JSON first.
+      try {
+        final decoded = jsonDecode(value);
+        if (decoded is Map) {
+          for (final v in decoded.values) {
+            if (v is String && v.trim().isNotEmpty) {
+              return v.trim();
+            }
+          }
+        }
+      } catch (_) {
+        // Not valid JSON — try manual extraction.
+      }
+      // Manual extraction for non-standard JSON like {app_name: spotify}
+      final inner = value.substring(1, value.length - 1).trim();
+      final colonIdx = inner.indexOf(':');
+      if (colonIdx != -1) {
+        final val = inner.substring(colonIdx + 1).trim();
+        // Remove surrounding quotes if present.
+        final cleaned = val.replaceAll(RegExp('^["\']|["\']\$'), '');
+        if (cleaned.isNotEmpty) {
+          return cleaned;
+        }
+      }
+    }
+
+    // If the model passed a JSON array like ["spotify"], extract the value.
+    if (value.startsWith('[') && value.endsWith(']')) {
+      try {
+        final decoded = jsonDecode(value);
+        if (decoded is List && decoded.isNotEmpty) {
+          final first = decoded.first;
+          if (first is String && first.trim().isNotEmpty) {
+            return first.trim();
+          }
+        }
+      } catch (_) {
+        // Not valid JSON — return as-is.
+      }
+    }
+
+    // Plain text — return as-is.
     return value;
   }
 }

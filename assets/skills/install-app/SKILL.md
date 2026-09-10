@@ -18,3 +18,4 @@ Call the install-app capability with the application name.
 
 Do not invent or guess the Android package name.
 The application name will be resolved through the Play Store search service.
+You have to fetch only the application name from the user's request.not the json array only extract the name of application

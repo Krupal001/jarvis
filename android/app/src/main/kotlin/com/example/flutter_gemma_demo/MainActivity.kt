@@ -39,6 +39,24 @@ class MainActivity : FlutterActivity() {
                     startActivity(intent)
                     result.success(true)
                 }
+                "checkAccessibilityEnabled" -> {
+                    val accessibilityManager =
+                        getSystemService(ACCESSIBILITY_SERVICE)
+                                as android.view.accessibility.AccessibilityManager
+
+                    val enabledServices =
+                        accessibilityManager.getEnabledAccessibilityServiceList(
+                            android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK
+                        )
+
+                    val enabled = enabledServices.any {
+                        it.resolveInfo.serviceInfo.packageName == packageName &&
+                                it.resolveInfo.serviceInfo.name ==
+                                "com.example.flutter_gemma_demo.PlayStoreAccessibilityService"
+                    }
+
+                    result.success(enabled)
+                }
                 else -> {
                     result.notImplemented()
                 }

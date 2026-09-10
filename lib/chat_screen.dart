@@ -25,9 +25,11 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   AgentService? _agentService;
   AgentSession? _session;
+  InferenceModel? _model;
+  
 
   final List<_ChatMessage> _messages = [];
   final TextEditingController _inputController = TextEditingController();
@@ -37,6 +39,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isGenerating = false;
   bool _isCancelled = false;
   String? _initError;
+  Timer? _backgroundTimer;
 
   // The streaming response being built up token-by-token.
   String _streamingText = '';
@@ -63,7 +66,28 @@ class _ChatScreenState extends State<ChatScreen> {
     
   }
 
- 
+ @override
+void didChangeAppLifecycleState(AppLifecycleState state) {
+  if (state == AppLifecycleState.paused) {
+    _backgroundTimer?.cancel();
+
+    _backgroundTimer = Timer(
+      const Duration(minutes: 2),
+      () async {
+        await _releaseModel();
+      },
+    );
+  }
+
+  if (state == AppLifecycleState.resumed) {
+    _backgroundTimer?.cancel();
+    _backgroundTimer = null;
+
+    if (_model == null) {
+      _initSession();
+    }
+  }
+}
 
   @override
   void dispose() {
@@ -79,12 +103,12 @@ class _ChatScreenState extends State<ChatScreen> {
       // names when the model triggers send-sms.
       await _requestContactPermission();
 
-      final model = await FlutterGemma.getActiveModel(
+      _model = await FlutterGemma.getActiveModel(
         maxTokens: 4096,
         preferredBackend: PreferredBackend.gpu,
       );
 
-      final session = await _agentService!.createSession(model);
+      final session = await _agentService!.createSession(_model!);
 
       if (!mounted) return;
       setState(() {
@@ -101,6 +125,23 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<void> _releaseModel() async {
+  final model = _model;
+
+  if (model == null) return;
+
+  try {
+    await model.close();
+
+    _model = null;
+    _session = null;
+
+    debugPrint('Gemma model closed');
+  } catch (e) {
+    debugPrint('Error closing Gemma model: $e');
+  }
+}
+
   Future<void> _stopGeneration() async {
   if (!_isGenerating) return;
 
@@ -115,7 +156,6 @@ class _ChatScreenState extends State<ChatScreen> {
   if (!mounted) return;
 
   setState(() {
-    _isGenerating = false;
 
     if (_streamingText.isNotEmpty) {
       _messages.add(
@@ -440,7 +480,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       glowRadius: 4,
                     ),
                     Text(
-                      'SMS · WhatsApp · Install',
+                      'SMS · WhatsApp · Install · Uninstall · device info',
                       style: NeonText.mono.copyWith(
                         fontSize: 10,
                         color: NeonColors.purple.withValues(alpha: 0.6),
@@ -726,13 +766,13 @@ class _ChatBubble extends StatelessWidget {
         ? Colors.red.withValues(alpha: 0.08)
         : isUser
             ? NeonColors.cyan.withValues(alpha: 0.08)
-            : NeonColors.bgCard.withValues(alpha: 0.6);
+            : NeonColors.purple.withValues(alpha: 0.12);
 
     final fg = isError
         ? Colors.redAccent
         : isUser
             ? Colors.white.withValues(alpha: 0.95)
-            : Colors.white.withValues(alpha: 0.85);
+            : Colors.white.withValues(alpha: 0.97);
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -755,13 +795,13 @@ class _ChatBubble extends StatelessWidget {
                 : const Radius.circular(18),
           ),
           border: Border.all(
-            color: accentColor.withValues(alpha: 0.15),
-            width: 0.6,
+            color: accentColor.withValues(alpha: 0.4),
+            width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: accentColor.withValues(alpha: 0.05),
-              blurRadius: 6,
+              color: accentColor.withValues(alpha: 0.12),
+              blurRadius: 8,
             ),
           ],
         ),

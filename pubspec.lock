@@ -182,14 +182,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  flutter_accessibility_service:
-    dependency: "direct main"
-    description:
-      name: flutter_accessibility_service
-      sha256: a63ca662e871483e78c476325f69c6a110f0da128451337339ac04962729d0b4
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.2.0"
   flutter_contacts:
     dependency: "direct main"
     description:
@@ -198,6 +190,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.1"
+  flutter_device_info_plus:
+    dependency: "direct main"
+    description:
+      name: flutter_device_info_plus
+      sha256: "1762ae05861257b0a8f907547016bbee9d809816ad4a06479c21a764fe3078e6"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.7.1"
   flutter_gemma:
     dependency: "direct main"
     description:

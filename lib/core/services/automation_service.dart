@@ -18,4 +18,12 @@ class AutomationService {
   static Future<void> openAccessibilitySettings() async {
     await _channel.invokeMethod('openAccessibilitySettings');
   }
+
+  static Future<bool> isAccessibilityEnabled() async {
+    return await _channel.invokeMethod<bool>(
+          'checkAccessibilityEnabled',
+        ) ??
+        false;
+  }
+
 }

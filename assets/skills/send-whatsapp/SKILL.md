@@ -1,26 +1,46 @@
 ---
 name: send-whatsapp
-description: Send a WhatsApp message to a contact by their name.
+description: Send a WhatsApp message to a contact.
+metadata:
+  category: messaging
+  action: send
 ---
 
-# Send WhatsApp
+# Send WhatsApp Message
 
 ## Instructions
 
-Use this skill when the user wants to send a WhatsApp message.
+Use this skill when the user asks to send a WhatsApp message.
 
-Extract:
+Extract exactly two values:
 
-- contactName
-- message
+1. contactName
+2. message
 
-Then call the run_intent tool with:
+The contact name comes before the message.
 
-intent: send_whatsapp
+For requests such as:
 
-parameters: JSON string containing:
+"send message to Samir hi"
 
-{
-  "contactName": "the contact name",
-  "message": "the message to send"
-}
+extract:
+
+contactName = "Samir"
+message = "hi"
+
+For:
+
+"send Samir on WhatsApp hello how are you"
+
+extract:
+
+contactName = "Samir"
+message = "hello how are you"
+
+Do NOT include the message text inside contactName.
+
+Do NOT include words such as "hi", "hello", "hey", or the actual message content in contactName.
+
+The contactName must contain only the person's name.
+
+The message must contain everything intended to be sent.

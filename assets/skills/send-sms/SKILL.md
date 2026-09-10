@@ -1,26 +1,36 @@
 ---
 name: send-sms
-description: Send an SMS message to a contact by their name.
+description: Send an SMS message to a contact.
+metadata:
+  category: communication
+  action: send
 ---
 
 # Send SMS
 
 ## Instructions
 
-Use this skill when the user wants to send an SMS.
+Use this skill when the user asks to send an SMS message.
 
-Extract:
+Extract exactly two values:
 
-- contactName
-- message
+- `contactName`: only the recipient's name.
+- `message`: the complete message to send.
 
-Then call the run_intent tool with:
+The recipient name comes before the message.
 
-intent: send_sms
+Example:
 
-parameters: JSON string containing:
+User: "send SMS to Samir hi"
 
-{
-  "contactName": "the contact name",
-  "message": "the message to send"
-}
+contactName: "Samir"
+
+message: "hi"
+
+User: "send SMS to Rahul how are you"
+
+contactName: "Rahul"
+
+message: "how are you"
+
+Never include the message content in `contactName`.
