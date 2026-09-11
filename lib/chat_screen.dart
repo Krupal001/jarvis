@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_gemma_agent/flutter_gemma_agent.dart';
@@ -67,27 +66,27 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
  @override
-void didChangeAppLifecycleState(AppLifecycleState state) {
-  if (state == AppLifecycleState.paused) {
-    _backgroundTimer?.cancel();
+// void didChangeAppLifecycleState(AppLifecycleState state) {
+//   if (state == AppLifecycleState.paused) {
+//     _backgroundTimer?.cancel();
 
-    _backgroundTimer = Timer(
-      const Duration(minutes: 2),
-      () async {
-        await _releaseModel();
-      },
-    );
-  }
+//     _backgroundTimer = Timer(
+//       const Duration(minutes: 2),
+//       () async { 
+//         await _releaseModel();
+//       },
+//     );
+//   }
 
-  if (state == AppLifecycleState.resumed) {
-    _backgroundTimer?.cancel();
-    _backgroundTimer = null;
+//   if (state == AppLifecycleState.resumed) {
+//     _backgroundTimer?.cancel();
+//     _backgroundTimer = null;
 
-    if (_model == null) {
-      _initSession();
-    }
-  }
-}
+//     if (_model == null) {
+//       _initSession();
+//     }
+//   }
+// }
 
   @override
   void dispose() {
@@ -117,14 +116,12 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
       });
     } catch (e) {
       if (!mounted) return;
-      
       setState(() {
         _initError = e.toString();
         _isInitializing = false;
       });
     }
   }
-
   Future<void> _releaseModel() async {
   final model = _model;
 
@@ -189,8 +186,7 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
       _streamingText = '';
       _steps.clear();
     });
-    _scrollToBottom();
-
+    //_scrollToBottom();
     try {
       final eventStream = _session!.ask(text,
         isCancelled: () => _isCancelled,
@@ -222,7 +218,7 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
             });
           case TextChunkEvent(:final text):
             setState(() => _streamingText += text);
-            _scrollToBottom();
+           // _scrollToBottom();
           case DoneEvent(:final text):
             setState(() {
               if (text.isNotEmpty) {
@@ -392,15 +388,13 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                   itemCount: _messages.length +
                       (_isGenerating ? 1 : 0) +
-                      (_steps.isNotEmpty && _isGenerating ? 1 : 0),
+                      (_steps.isNotEmpty ? 1 : 0),
                   itemBuilder: (context, index) {
                     final stepPanelIndex = _messages.length;
                     final streamingIndex = stepPanelIndex +
-                        (_steps.isNotEmpty && _isGenerating ? 1 : 0);
+                        (_steps.isNotEmpty ? 1 : 0);
 
-                    if (index == stepPanelIndex &&
-                        _steps.isNotEmpty &&
-                        _isGenerating) {
+                    if (index == stepPanelIndex && _steps.isNotEmpty) {
                       return _AgentStepsPanel(steps: _steps);
                     }
                     if (index == streamingIndex && _isGenerating) {

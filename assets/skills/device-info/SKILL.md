@@ -1,6 +1,8 @@
 ---
 name: device-info
-description: Get information about the user's device.
+
+description: Get specific information about the user's device.
+
 metadata:
   category: device
   action: information
@@ -12,12 +14,17 @@ metadata:
 
 Use this skill when the user asks for information about their device.
 
-Extract what information the user is requesting.
+Extract the specific device information requested by the user.
 
-Supported categories:
+Supported fields:
 
-- device
-- system
+- model
+- manufacturer
+- brand
+- os
+- os_version
+- build_number
+- kernel
 - processor
 - memory
 - storage
@@ -26,27 +33,90 @@ Supported categories:
 - sensors
 - network
 - security
+- all
 
-If the user asks for all device specifications, request all available device information.
+## Field Selection Rules
 
-If the user asks for a specific category, request only that category.
+Always select the most specific field that matches the user's request.
+
+Do not request `all` unless the user explicitly asks for complete, full, detailed, or all device specifications.
 
 Examples:
 
 User: "Show me all my device specs"
-Category: all
 
-User: "How much RAM do I have?"
-Category: memory
+Field: all
 
-User: "How much free storage do I have?"
-Category: storage
+User: "What phone model do I have?"
+
+Field: model
+
+User: "Who made my phone?"
+
+Field: manufacturer
+
+User: "What brand is my phone?"
+
+Field: brand
+
+User: "What operating system am I using?"
+
+Field: os
+
+User: "What Android version am I using?"
+
+Field: os_version
+
+User: "What is my Android version?"
+
+Field: os_version
+
+User: "What is my build number?"
+
+Field: build_number
+
+User: "What kernel version am I using?"
+
+Field: kernel
 
 User: "What processor does my phone have?"
-Category: processor
+
+Field: processor
+
+User: "How much RAM do I have?"
+
+Field: memory
+
+User: "How much free storage do I have?"
+
+Field: storage
+
+User: "What is my screen resolution?"
+
+Field: display
 
 User: "What's my battery percentage?"
-Category: battery
 
-Do not invent device information.
-Use only information returned by the device information capability.
+Field: battery
+
+User: "What sensors does my phone have?"
+
+Field: sensors
+
+User: "What's my IP address?"
+
+Field: network
+
+User: "Does my phone support fingerprint authentication?"
+
+Field: security
+
+## Important Rules
+
+- Return only the information requested by the user.
+- Do not request unrelated device information.
+- Do not use `all` for a specific request.
+- Do not invent device information.
+- Use only information returned by the device information capability.
+- If the requested information is unavailable, report that it is unavailable.
+- If the request does not match a supported field, report that the requested information is unsupported.

@@ -31,7 +31,10 @@ class MessagingSkillExecutor extends SkillExecutor {
   int get priority => 10;
 
   @override
-  bool canExecuteSkill(Skill skill) => skill.type == SkillType.intent;
+  bool canExecuteSkill(Skill skill) =>
+      skill.name == 'send-sms' ||
+      skill.name == 'send-whatsapp' ||
+      skill.type == SkillType.intent;
 
   @override
   Future<SkillResult> execute(
@@ -42,9 +45,9 @@ class MessagingSkillExecutor extends SkillExecutor {
     // The agent loop sets the synthetic skill's name to the intent value the
     // model passed to `runIntent(intent, parameters)`.
     switch (skill.name) {
-      case 'send_sms':
+      case 'send-sms':
         return _sendSms(dataJson);
-      case 'send_whatsapp':
+      case 'send-whatsapp':
         return _sendWhatsApp(dataJson);
       default:
         return ErrorResult(
