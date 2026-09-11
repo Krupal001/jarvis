@@ -205,10 +205,14 @@ Features: ${processor.features.join(', ')}
     final device = await deviceInfoService.getDeviceInfo();
     final memory = device.memoryInfo;
 
+    final totalGB = memory.totalPhysicalMemory / (1024 * 1024 * 1024);
+    final availableGB = memory.availablePhysicalMemory / (1024 * 1024 * 1024);
+
     return '''
-Memory:
-Total Physical Memory: ${memory.totalPhysicalMemory}
-Available Physical Memory: ${memory.availablePhysicalMemory}
+Memory (RAM):
+Total: ${totalGB.toStringAsFixed(1)} GB
+Available: ${availableGB.toStringAsFixed(1)} GB
+Usage: ${memory.memoryUsagePercentage.toStringAsFixed(0)}%
 ''';
   }
 
@@ -225,16 +229,20 @@ Available Physical Memory: ${memory.availablePhysicalMemory}
     }
 
     final volumes = storage.volumes.map((volume) {
+      final totalGB = volume.totalCapacity / (1024 * 1024 * 1024);
+      final availableGB = volume.availableCapacity / (1024 * 1024 * 1024);
+      final usedGB = volume.usedCapacity / (1024 * 1024 * 1024);
       return '''
 Volume: ${volume.name}
 Mount Path: ${volume.mountPath}
-Total Capacity: ${volume.totalCapacity}
-Available Capacity: ${volume.availableCapacity}
+Total Capacity: ${totalGB.toStringAsFixed(1)} GB
+Available Capacity: ${availableGB.toStringAsFixed(1)} GB
+Used Capacity: ${usedGB.toStringAsFixed(1)} GB
 Removable: ${volume.isRemovable}
 ''';
     }).join('\n');
 
-    return 'Storage:\n$volumes';
+    return 'Storage (ROM):\n$volumes';
   }
 
   // ---------------------------------------------------------------------------
@@ -325,11 +333,13 @@ Primary: ${display.isPrimary}
     }).join('\n');
 
     final storageInfo = storage.volumes.map((volume) {
+      final totalGB = volume.totalCapacity / (1024 * 1024 * 1024);
+      final availableGB = volume.availableCapacity / (1024 * 1024 * 1024);
       return '''
 Volume: ${volume.name}
 Mount Path: ${volume.mountPath}
-Total Capacity: ${volume.totalCapacity}
-Available Capacity: ${volume.availableCapacity}
+Total Capacity: ${totalGB.toStringAsFixed(1)} GB
+Available Capacity: ${availableGB.toStringAsFixed(1)} GB
 Removable: ${volume.isRemovable}
 ''';
     }).join('\n');
@@ -358,9 +368,9 @@ Core Count: ${processor.coreCount}
 Max Frequency: ${processor.maxFrequency}
 Features: ${processor.features.join(', ')}
 
-Memory:
-Total Physical Memory: ${memory.totalPhysicalMemory}
-Available Physical Memory: ${memory.availablePhysicalMemory}
+Memory (RAM):
+Total: ${(memory.totalPhysicalMemory / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB
+Available: ${(memory.availablePhysicalMemory / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB
 
 Storage:
 $storageInfo

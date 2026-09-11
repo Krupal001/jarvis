@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_gemma_agent/flutter_gemma_agent.dart';
 import 'package:flutter_gemma_demo/core/services/sms_service.dart';
 import 'package:flutter_gemma_demo/core/services/whatsapp_service.dart';
@@ -104,8 +105,91 @@ class MessagingSkillExecutor extends SkillExecutor {
   }
 
   Map<String, dynamic> _decode(String json) {
-    final decoded = jsonDecode(json);
-    if (decoded is Map<String, dynamic>) return decoded;
-    throw FormatException('Expected a JSON object, got: $json');
+    final value = json.trim();
+    if (value.isEmpty) return {};
+
+    debugPrint('[MessagingSkillExecutor] raw dataJson: "$value"');
+
+    // Try parsing as JSON first.
+    try {
+      final decoded = jsonDecode(value);
+      if (decoded is Map<String, dynamic>) return decoded;
+      if (decoded is Map) return decoded.cast<String, dynamic>();
+    } catch (_) {
+      // Not valid JSON — try manual extraction below.
+    }
+
+    // Try non-standard JSON like {contactName: Samir, message: hello}
+    // or without braces: contactName: Samir, message: hello
+    final hasBraces = value.startsWith('{') && value.endsWith('}');
+    final inner = hasBraces ? value.substring(1, value.length - 1) : value;
+
+    // Check if this looks like key:value pairs (has a colon before any comma)
+    final firstColon = inner.indexOf(':');
+    final firstComma = inner.indexOf(',');
+    if (firstColon > 0 && (firstComma == -1 || firstColon < firstComma)) {
+      final result = <String, dynamic>{};
+      final parts = _splitArgs(inner);
+      var allParsed = true;
+      for (final part in parts) {
+        final colonIdx = part.indexOf(':');
+        if (colonIdx != -1) {
+          final key = part.substring(0, colonIdx).trim();
+          var val = part.substring(colonIdx + 1).trim();
+          val = val.replaceAll(RegExp('^["\']|["\']\$'), '');
+          if (key.isNotEmpty && val.isNotEmpty) {
+            result[key] = val;
+          } else {
+            allParsed = false;
+          }
+        } else {
+          allParsed = false;
+        }
+      }
+      if (allParsed && result.isNotEmpty) return result;
+    }
+
+    // Plain text fallback: try to split into name and message.
+    // Patterns: "Samir, hello", "Samir: hello"
+    // But only if the part before the separator looks like a name (not a key name).
+    for (final sep in [',', ':']) {
+      final idx = value.indexOf(sep);
+      if (idx > 0) {
+        final name = value.substring(0, idx).trim();
+        final msg = value.substring(idx + 1).trim();
+        // Skip if the "name" looks like a key name (contactName, message, etc.)
+        final lowerName = name.toLowerCase();
+        if (lowerName == 'contactname' || lowerName == 'message' ||
+            lowerName == 'contact' || lowerName == 'name') {
+          continue;
+        }
+        if (name.isNotEmpty && msg.isNotEmpty) {
+          return {'contactName': name, 'message': msg};
+        }
+      }
+    }
+
+    // Last resort: return as contactName (model may have sent just the name).
+    return {'contactName': value};
+  }
+
+  List<String> _splitArgs(String input) {
+    final result = <String>[];
+    var current = StringBuffer();
+    var inQuotes = false;
+    for (var i = 0; i < input.length; i++) {
+      final ch = input[i];
+      if (ch == '"' || ch == "'") {
+        inQuotes = !inQuotes;
+        current.write(ch);
+      } else if (ch == ',' && !inQuotes) {
+        result.add(current.toString());
+        current = StringBuffer();
+      } else {
+        current.write(ch);
+      }
+    }
+    if (current.isNotEmpty) result.add(current.toString());
+    return result;
   }
 }

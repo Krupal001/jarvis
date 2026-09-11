@@ -37,6 +37,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   bool _isInitializing = true;
   bool _isGenerating = false;
   bool _isCancelled = false;
+  int _generationId = 0;
   String? _initError;
   Timer? _backgroundTimer;
 
@@ -103,7 +104,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       await _requestContactPermission();
 
       _model = await FlutterGemma.getActiveModel(
-        maxTokens: 4096,
+        maxTokens: 8000,
         preferredBackend: PreferredBackend.gpu,
       );
 
@@ -143,6 +144,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   if (!_isGenerating) return;
 
   _isCancelled = true;
+  _generationId++;
 
   try {
     await _session?.chat.session?.stopGeneration();
@@ -153,7 +155,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   if (!mounted) return;
 
   setState(() {
-
     if (_streamingText.isNotEmpty) {
       _messages.add(
         _ChatMessage(
@@ -162,8 +163,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         ),
       );
     }
-
     _streamingText = '';
+    _isGenerating = false;
   });
 }
 
@@ -179,6 +180,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
     _inputController.clear();
 
+    final myGen = ++_generationId;
     setState(() {
       _messages.add(_ChatMessage(text: text, isUser: true));
       _isGenerating = true;
@@ -192,7 +194,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         isCancelled: () => _isCancelled,
       );
       await for (final event in eventStream) {
-        if (!mounted) return;
+        if (!mounted || _generationId != myGen) return;
         switch (event) {
           case SkillLoadEvent(:final skillName, :final found):
             setState(() {
@@ -246,7 +248,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       }
 
       // If the stream ended without a DoneEvent (e.g. cancelled), flush.
-      if (mounted && _isGenerating) {
+      if (mounted && _isGenerating && _generationId == myGen) {
         setState(() {
           if (_streamingText.isNotEmpty) {
             _messages.add(_ChatMessage(text: _streamingText, isUser: false));
@@ -256,7 +258,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         });
       }
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || _generationId != myGen) return;
       setState(() {
         if (_streamingText.isNotEmpty) {
           _messages.add(_ChatMessage(text: _streamingText, isUser: false));

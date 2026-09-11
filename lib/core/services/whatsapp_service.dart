@@ -50,7 +50,15 @@ class WhatsAppService {
   }) async {
     // WhatsApp requires the number in international format without +, spaces,
     // dashes or leading zeros. Strip everything that isn't a digit.
-    final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+    var cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+
+    // If the number is 10 digits (no country code), prepend India's code (91).
+    // If it starts with 0 (local trunk prefix), remove the 0 and prepend 91.
+    if (cleanNumber.startsWith('0') && cleanNumber.length == 11) {
+      cleanNumber = '91${cleanNumber.substring(1)}';
+    } else if (cleanNumber.length == 10) {
+      cleanNumber = '91$cleanNumber';
+    }
     final encodedText = Uri.encodeComponent(message);
 
     // 1. Try the native app deep link first.
