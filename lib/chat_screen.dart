@@ -1,14 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_gemma_agent/flutter_gemma_agent.dart';
 import 'package:flutter_gemma_demo/agent/agent_service.dart';
 import 'package:flutter_gemma_demo/core/services/contact_service.dart';
 import 'package:flutter_gemma_demo/core/services/sms_service.dart';
 import 'package:flutter_gemma_demo/core/services/whatsapp_service.dart';
-import 'package:flutter_gemma_demo/ui/neon_background.dart';
-import 'package:flutter_gemma_demo/ui/neon_theme.dart';
-import 'package:flutter_gemma_demo/ui/neon_widgets.dart';
+import 'package:flutter_gemma_demo/ui/app_background.dart';
+import 'package:flutter_gemma_demo/ui/app_theme.dart';
+import 'package:flutter_gemma_demo/ui/app_widgets.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 /// A chat screen backed by the flutter_gemma_agent [AgentSession].
@@ -113,7 +114,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       if (!mounted) return;
       setState(() {
         _session = session;
-        _isInitializing = false;
+       _isInitializing = false;
       });
     } catch (e) {
       if (!mounted) return;
@@ -123,45 +124,78 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       });
     }
   }
-  Future<void> _releaseModel() async {
-  final model = _model;
+//   Future<void> _releaseModel() async {
+//   final model = _model;
 
-  if (model == null) return;
+//   if (model == null) return;
 
-  try {
-    await model.close();
+//   try {
+//     await model.close();
 
-    _model = null;
-    _session = null;
+//     _model = null;
+//     _session = null;
 
-    debugPrint('Gemma model closed');
-  } catch (e) {
-    debugPrint('Error closing Gemma model: $e');
-  }
-}
+//     debugPrint('Gemma model closed');
+//   } catch (e) {
+//     debugPrint('Error closing Gemma model: $e');
+//   }
+// }
 
-  Future<void> _stopGeneration() async {
+//   Future<void> _stopGeneration() async {
+//   if (!_isGenerating) return;
+
+//   _isCancelled = true;
+//   _generationId++;
+
+//   try {
+//     await _session?.chat.session.stopGeneration();
+//   } catch (_) {
+//     // Generation may already have finished.
+//     debugPrint('Generation may already have finished');
+//   }
+
+//   if (!mounted) return;
+
+//   setState(() {
+//     if (_streamingText.isNotEmpty) {
+//       _messages.add(
+//         _ChatMessage(
+//           text: _streamingText,
+//           isUser: false,
+//         ),
+//       );
+//     }
+//     _streamingText = '';
+//     _isGenerating = false;
+//   });
+// }
+
+StreamSubscription? _eventSubscription;
+
+Future<void> _stopGeneration() async {
   if (!_isGenerating) return;
-
   _isCancelled = true;
   _generationId++;
 
+  await _eventSubscription?.cancel();
+  _eventSubscription = null;
+
   try {
-    await _session?.chat.session?.stopGeneration();
-  } catch (_) {
-    // Generation may already have finished.
+    await _session?.chat.session.stopGeneration();
+  } catch (_) {}
+
+  // The native FFI session's cancel flag doesn't reset — force a fresh session.
+  try {
+    await _session?.close();
+  } catch (_) {}
+  if (_model != null) {
+    _session = await _agentService!.createSession(_model!);
   }
 
   if (!mounted) return;
-
   setState(() {
     if (_streamingText.isNotEmpty) {
-      _messages.add(
-        _ChatMessage(
-          text: _streamingText,
-          isUser: false,
-        ),
-      );
+      _messages.add(_ChatMessage(text: _streamingText, isUser: false));
     }
     _streamingText = '';
     _isGenerating = false;
@@ -174,80 +208,193 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     await Permission.contacts.request();
   }
 
+  // Future<void> _sendMessage() async {
+  //   final text = _inputController.text.trim();
+  //   if (text.isEmpty || _isGenerating || _session == null) return;
+
+  //   _inputController.clear();
+
+  //   final myGen = ++_generationId;
+  //   setState(() {
+  //     _messages.add(_ChatMessage(text: text, isUser: true));
+  //     _isGenerating = true;
+  //     _isCancelled = false;
+  //     _streamingText = '';
+  //     _steps.clear();
+  //   });
+  //   _scrollToBottom();
+  //   try {
+  //     final eventStream = _session!.ask(text,
+  //       isCancelled: () => _isCancelled,
+  //     );
+  //     await for (final event in eventStream) {
+  //       if (!mounted || _generationId != myGen) return;
+  //       switch (event) {
+  //         case SkillLoadEvent(:final skillName, :final found):
+  //           setState(() {
+  //             _steps.add(_AgentStep(
+  //               'Loading skill "$skillName"...',
+  //               isError: !found,
+  //             ));
+  //           });
+  //         case ToolCallEvent(:final toolName, :final args):
+  //           setState(() {
+  //             _steps.add(_AgentStep(
+  //               'Calling $toolName(${_formatArgs(args)})',
+  //             ));
+  //           });
+  //         case ToolResultEvent(:final result):
+  //           final summary = switch (result) {
+  //             TextResult(:final text) => text,
+  //             ErrorResult(:final message) => 'Error: $message',
+  //             _ => result.toString(),
+  //           };
+  //           setState(() {
+  //             _steps.add(_AgentStep('Result: $summary'));
+  //           });
+  //         case TextChunkEvent(:final text):
+  //           setState(() => _streamingText += text);
+  //          // _scrollToBottom();
+  //         case DoneEvent(:final text):
+  //           setState(() {
+  //             if (text.isNotEmpty) {
+  //               _messages.add(_ChatMessage(text: text, isUser: false));
+  //             } else if (_streamingText.isNotEmpty) {
+  //               _messages.add(_ChatMessage(text: _streamingText, isUser: false));
+  //             }
+  //             _streamingText = '';
+  //             _isGenerating = false;
+  //           });
+  //         case MaxIterationsEvent(:final iterations):
+  //           setState(() {
+  //             _messages.add(_ChatMessage(
+  //               text: 'Reached the maximum number of steps ($iterations).',
+  //               isUser: false,
+  //               isError: true,
+  //             ));
+  //             _isGenerating = false;
+  //           });
+  //         case AgentErrorEvent(:final message):
+  //           setState(() {
+  //             _steps.add(_AgentStep('Error: $message', isError: true));
+  //           });
+  //     }
+  //     }
+
+  //     // If the stream ended without a DoneEvent (e.g. cancelled), flush.
+  //     if (mounted && _isGenerating && _generationId == myGen) {
+  //       setState(() {
+  //         if (_streamingText.isNotEmpty) {
+  //           _messages.add(_ChatMessage(text: _streamingText, isUser: false));
+  //         }
+  //         _streamingText = '';
+  //         _isGenerating = false;
+  //       });
+  //     }
+  //   } catch (e) {
+  //     if (!mounted || _generationId != myGen) return;
+  //     setState(() {
+  //       if (_streamingText.isNotEmpty) {
+  //         _messages.add(_ChatMessage(text: _streamingText, isUser: false));
+  //       }
+  //       _messages.add(_ChatMessage(
+  //         text: 'Error: $e',
+  //         isUser: false,
+  //         isError: true,
+  //       ));
+  //       _streamingText = '';
+  //       _isGenerating = false;
+  //     });
+  //   }
+  // }
+
   Future<void> _sendMessage() async {
-    final text = _inputController.text.trim();
-    if (text.isEmpty || _isGenerating || _session == null) return;
+  final text = _inputController.text.trim();
+  if (text.isEmpty || _isGenerating || _session == null) return;
 
-    _inputController.clear();
+  _inputController.clear();
+  final myGen = ++_generationId;
 
-    final myGen = ++_generationId;
-    setState(() {
-      _messages.add(_ChatMessage(text: text, isUser: true));
-      _isGenerating = true;
-      _isCancelled = false;
-      _streamingText = '';
-      _steps.clear();
-    });
-    //_scrollToBottom();
-    try {
-      final eventStream = _session!.ask(text,
-        isCancelled: () => _isCancelled,
-      );
-      await for (final event in eventStream) {
-        if (!mounted || _generationId != myGen) return;
-        switch (event) {
-          case SkillLoadEvent(:final skillName, :final found):
-            setState(() {
-              _steps.add(_AgentStep(
-                'Loading skill "$skillName"...',
-                isError: !found,
-              ));
-            });
-          case ToolCallEvent(:final toolName, :final args):
-            setState(() {
-              _steps.add(_AgentStep(
-                'Calling $toolName(${_formatArgs(args)})',
-              ));
-            });
-          case ToolResultEvent(:final result):
-            final summary = switch (result) {
-              TextResult(:final text) => text,
-              ErrorResult(:final message) => 'Error: $message',
-              _ => result.toString(),
-            };
-            setState(() {
-              _steps.add(_AgentStep('Result: $summary'));
-            });
-          case TextChunkEvent(:final text):
-            setState(() => _streamingText += text);
-           // _scrollToBottom();
-          case DoneEvent(:final text):
-            setState(() {
-              if (text.isNotEmpty) {
-                _messages.add(_ChatMessage(text: text, isUser: false));
-              } else if (_streamingText.isNotEmpty) {
-                _messages.add(_ChatMessage(text: _streamingText, isUser: false));
-              }
-              _streamingText = '';
-              _isGenerating = false;
-            });
-          case MaxIterationsEvent(:final iterations):
-            setState(() {
-              _messages.add(_ChatMessage(
-                text: 'Reached the maximum number of steps ($iterations).',
-                isUser: false,
-                isError: true,
-              ));
-              _isGenerating = false;
-            });
-          case AgentErrorEvent(:final message):
-            setState(() {
-              _steps.add(_AgentStep('Error: $message', isError: true));
-            });
+  setState(() {
+    _messages.add(_ChatMessage(text: text, isUser: true));
+    _isGenerating = true;
+    _isCancelled = false;
+    _streamingText = '';
+    _steps.clear();
+  });
+  _scrollToBottom();
+
+
+void _handleEvent(AgentEvent event) {
+  switch (event) {
+    case SkillLoadEvent(:final skillName, :final found):
+      setState(() {
+        _steps.add(_AgentStep(
+          'Loading skill "$skillName"...',
+          isError: !found,
+        ));
+      });
+    case ToolCallEvent(:final toolName, :final args):
+      setState(() {
+        _steps.add(_AgentStep(
+          'Calling $toolName(${_formatArgs(args)})',
+        ));
+      });
+    case ToolResultEvent(:final result):
+      final summary = switch (result) {
+        TextResult(:final text) => text,
+        ErrorResult(:final message) => 'Error: $message',
+        _ => result.toString(),
+      };
+      setState(() {
+        _steps.add(_AgentStep('Result: $summary'));
+      });
+    case TextChunkEvent(:final text):
+      setState(() => _streamingText += text);
+    case DoneEvent(:final text):
+  debugPrint('=== DoneEvent text="$text" | _streamingText="$_streamingText" ===');
+  setState(() {
+    if (text.isNotEmpty) {
+      _messages.add(_ChatMessage(text: text, isUser: false));
+    } else if (_streamingText.isNotEmpty) {
+      _messages.add(_ChatMessage(text: _streamingText, isUser: false));
+    }
+    _streamingText = '';
+    _isGenerating = false;
+  });
+    case MaxIterationsEvent(:final iterations):
+      setState(() {
+        _messages.add(_ChatMessage(
+          text: 'Reached the maximum number of steps ($iterations).',
+          isUser: false,
+          isError: true,
+        ));
+        _isGenerating = false;
+      });
+    case AgentErrorEvent(:final message):
+      setState(() {
+        _steps.add(_AgentStep('Error: $message', isError: true));
+      });
+  }
+}
+  final completer = Completer<void>();
+  final eventStream = _session!.ask(text, isCancelled: () => _isCancelled);
+
+  _eventSubscription = eventStream.listen(
+    (event) {
+      if (!mounted || _generationId != myGen) return;
+      _handleEvent(event); // move your switch-case into a helper
+    },
+    onError: (e) {
+      if (mounted && _generationId == myGen) {
+        setState(() {
+          _messages.add(_ChatMessage(text: 'Error: $e', isUser: false, isError: true));
+          _isGenerating = false;
+        });
       }
-      }
-
-      // If the stream ended without a DoneEvent (e.g. cancelled), flush.
+      if (!completer.isCompleted) completer.complete();
+    },
+    onDone: () {
       if (mounted && _isGenerating && _generationId == myGen) {
         setState(() {
           if (_streamingText.isNotEmpty) {
@@ -257,22 +404,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           _isGenerating = false;
         });
       }
-    } catch (e) {
-      if (!mounted || _generationId != myGen) return;
-      setState(() {
-        if (_streamingText.isNotEmpty) {
-          _messages.add(_ChatMessage(text: _streamingText, isUser: false));
-        }
-        _messages.add(_ChatMessage(
-          text: 'Error: $e',
-          isUser: false,
-          isError: true,
-        ));
-        _streamingText = '';
-        _isGenerating = false;
-      });
-    }
-  }
+      if (!completer.isCompleted) completer.complete();
+    },
+    cancelOnError: true,
+  );
+
+  await completer.future;
+  _eventSubscription = null;
+}
 
   String _formatArgs(Map<String, dynamic> args) {
     return args.entries.map((e) => '${e.key}: ${e.value}').join(', ');
@@ -296,17 +435,17 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       return Scaffold(
         body: Stack(
           children: [
-            const NeonBackground(),
+            const AppBackground(),
             SafeArea(
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const NeonPulseRing(size: 80),
+                    const LoadingIndicator(size: 200),
                     const SizedBox(height: 24),
-                    NeonShimmerText(
+                    Text(
                       'Initializing AI...',
-                      style: NeonText.heading.copyWith(fontSize: 18),
+                      style: AppText.heading.copyWith(fontSize: 24, color: AppColors.textSecondary),
                     ),
                   ],
                 ),
@@ -321,13 +460,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       return Scaffold(
         body: Stack(
           children: [
-            const NeonBackground(),
+            const AppBackground(),
             SafeArea(
               child: Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
-                  child: NeonGlassCard(
-                    glowColor: Colors.red,
+                  child: GlassCard(
+                    accentColor: AppColors.red,
                     borderRadius: 20,
                     child: Padding(
                       padding: const EdgeInsets.all(32),
@@ -339,30 +478,29 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                             height: 64,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Colors.red.withValues(alpha: 0.1),
+                              color: AppColors.red.withValues(alpha: 0.08),
                               border: Border.all(
-                                color: Colors.red.withValues(alpha: 0.4),
+                                color: AppColors.red.withValues(alpha: 0.3),
                                 width: 1.5,
                               ),
                             ),
                             child: const Icon(Icons.error_outline,
-                                size: 32, color: Colors.redAccent),
+                                size: 32, color: AppColors.red),
                           ),
                           const SizedBox(height: 16),
-                          NeonGlowText(
+                          Text(
                             'Failed to initialize',
-                            style: NeonText.heading.copyWith(
+                            style: AppText.heading.copyWith(
                               fontSize: 18,
-                              color: Colors.redAccent,
+                              color: AppColors.red,
                             ),
-                            glowColor: Colors.red,
                           ),
                           const SizedBox(height: 8),
                           Text(
                             _initError!,
                             textAlign: TextAlign.center,
-                            style: NeonText.body
-                                .copyWith(color: Colors.white54, fontSize: 14),
+                            style: AppText.body
+                                .copyWith(color: AppColors.textSecondary, fontSize: 14),
                           ),
                         ],
                       ),
@@ -377,146 +515,77 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
 
     return Scaffold(
-      body: Stack(
+      body: Column(
         children: [
-          const NeonBackground(),
-          Column(
-            children: [
-              _buildNeonAppBar(),
-              Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                  itemCount: _messages.length +
-                      (_isGenerating ? 1 : 0) +
-                      (_steps.isNotEmpty ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    final stepPanelIndex = _messages.length;
-                    final streamingIndex = stepPanelIndex +
-                        (_steps.isNotEmpty ? 1 : 0);
+          _buildAppBar(),
+          Expanded(
+            child: _messages.isEmpty && !_isGenerating
+                ? const _WelcomeState()
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    itemCount: _messages.length +
+                        (_isGenerating ? 1 : 0) +
+                        (_steps.isNotEmpty ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      final stepPanelIndex = _messages.length;
+                      final streamingIndex = stepPanelIndex +
+                          (_steps.isNotEmpty ? 1 : 0);
 
-                    if (index == stepPanelIndex && _steps.isNotEmpty) {
-                      return _AgentStepsPanel(steps: _steps);
-                    }
-                    if (index == streamingIndex && _isGenerating) {
+                      if (index == stepPanelIndex && _steps.isNotEmpty) {
+                        return _AgentStepsPanel(steps: _steps);
+                      }
+                      if (index == streamingIndex && _isGenerating) {
+                        return _ChatBubble(
+                          text: _streamingText,
+                          isUser: false,
+                          isStreaming: true,
+                        );
+                      }
+                      final m = _messages[index];
                       return _ChatBubble(
-                        text: _streamingText,
-                        isUser: false,
-                        isStreaming: true,
+                        text: m.text,
+                        isUser: m.isUser,
+                        isError: m.isError,
                       );
-                    }
-                    final m = _messages[index];
-                    return _ChatBubble(
-                      text: m.text,
-                      isUser: m.isUser,
-                      isError: m.isError,
-                    );
-                  },
-                ),
-              ),
-              _buildInputBar(),
-            ],
+                    },
+                  ),
           ),
+          _buildInputBar(),
         ],
       ),
     );
   }
 
-  PreferredSizeWidget _buildNeonAppBar() {
+  PreferredSizeWidget _buildAppBar() {
     return PreferredSize(
-      preferredSize: const Size.fromHeight(kToolbarHeight + 10),
+      preferredSize: const Size.fromHeight(kToolbarHeight),
       child: SafeArea(
         bottom: false,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: const BoxDecoration(
             border: Border(
-              bottom: BorderSide(
-                color: NeonColors.cyan.withValues(alpha: 0.2),
-                width: 0.8,
-              ),
-            ),
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                NeonColors.bgDark.withValues(alpha: 0.8),
-                Colors.transparent,
-              ],
+              bottom: BorderSide(color: AppColors.borderLight, width: 0.5),
             ),
           ),
           child: Row(
             children: [
+              const Text(
+                'Gemma AI',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const Spacer(),
               Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: NeonColors.primaryGradient,
-                  boxShadow: NeonGlow.multi(blur: 8),
-                ),
-                child: const Icon(Icons.auto_awesome,
-                    size: 20, color: Colors.white),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    NeonGlowText(
-                      'Gemma AI',
-                      style: NeonText.headingBold.copyWith(
-                        fontSize: 18,
-                        color: Colors.white,
-                        letterSpacing: 0.5,
-                      ),
-                      glowColor: NeonColors.cyan,
-                      glowRadius: 4,
-                    ),
-                    Text(
-                      'SMS · WhatsApp · Install · Uninstall · device info',
-                      style: NeonText.mono.copyWith(
-                        fontSize: 10,
-                        color: NeonColors.purple.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  color: NeonColors.green.withValues(alpha: 0.1),
-                  border: Border.all(
-                    color: NeonColors.green.withValues(alpha: 0.3),
-                    width: 0.8,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: NeonColors.green,
-                        boxShadow: NeonGlow.soft(NeonColors.green, blur: 4, opacity: 0.1),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'ONLINE',
-                      style: NeonText.mono.copyWith(
-                        fontSize: 10,
-                        color: NeonColors.green,
-                      ),
-                    ),
-                  ],
+                  color: AppColors.green,
                 ),
               ),
             ],
@@ -529,84 +598,56 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   Widget _buildInputBar() {
     return SafeArea(
       top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        decoration: const BoxDecoration(
+          border: Border(
+            top: BorderSide(color: AppColors.borderLight, width: 0.5),
+          ),
+        ),
         child: Row(
           children: [
             Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: _isGenerating
-                      ? NeonGlow.pink(blur: 6)
-                      : NeonGlow.cyan(blur: 4),
-                ),
-                child: TextField(
-                  controller: _inputController,
-                  minLines: 1,
-                  maxLines: 5,
-                  style: NeonText.body.copyWith(color: Colors.white, fontSize: 15),
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => _sendMessage(),
-                  decoration: InputDecoration(
-                    hintText: 'e.g. "Send an SMS to John saying Hello"',
-                    hintStyle:
-                        NeonText.body.copyWith(color: Colors.white30, fontSize: 14),
-                    filled: true,
-                    fillColor: NeonColors.bgCard.withValues(alpha: 0.8),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide(
-                        color: (_isGenerating ? NeonColors.pink : NeonColors.cyan)
-                            .withValues(alpha: 0.4),
-                        width: 1,
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide(
-                        color: (_isGenerating ? NeonColors.pink : NeonColors.cyan)
-                            .withValues(alpha: 0.5),
-                        width: 1.2,
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide(
-                        color: NeonColors.purple.withValues(alpha: 0.25),
-                        width: 0.8,
-                      ),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 18, vertical: 12),
+              child: TextField(
+                controller: _inputController,
+                minLines: 1,
+                maxLines: 5,
+                style: AppText.body.copyWith(color: AppColors.textPrimary, fontSize: 16),
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _sendMessage(),
+                decoration: InputDecoration(
+                  hintText: 'Message Gemma AI...',
+                  hintStyle: AppText.body.copyWith(color: AppColors.textHint, fontSize: 16),
+                  filled: true,
+                  fillColor: AppColors.bgSoft,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(28),
+                    borderSide: BorderSide.none,
                   ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(28),
+                    borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(28),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             GestureDetector(
               onTap: _isGenerating ? _stopGeneration : _sendMessage,
               child: Container(
-                width: 52,
-                height: 52,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: _isGenerating
-                      ? LinearGradient(
-                          colors: [Colors.red.shade700, Colors.red.shade400],
-                        )
-                      : NeonColors.primaryGradient,
-                  boxShadow: _isGenerating
-                      ? [
-                          BoxShadow(
-                            color: Colors.red.withValues(alpha: 0.2),
-                            blurRadius: 8,
-                          ),
-                        ]
-                      : NeonGlow.multi(blur: 8),
+                  color: _isGenerating ? AppColors.red : AppColors.primary,
                 ),
                 child: Icon(
-                  _isGenerating ? Icons.stop : Icons.send,
+                  _isGenerating ? Icons.stop : Icons.arrow_upward,
                   color: Colors.white,
                   size: 22,
                 ),
@@ -648,91 +689,57 @@ class _AgentStepsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: NeonColors.bgCard.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: NeonColors.purple.withValues(alpha: 0.25),
-          width: 0.8,
+    return ExpansionTile(
+      tilePadding: const EdgeInsets.symmetric(horizontal: 4),
+      dense: true,
+      leading: const Icon(Icons.psychology, size: 18, color: AppColors.primary),
+      title: Text(
+        'Agent Steps',
+        style: AppText.bodySemiBold.copyWith(
+          fontSize: 13,
+          color: AppColors.textSecondary,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: NeonColors.purple.withValues(alpha: 0.05),
-            blurRadius: 8,
-          ),
-        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: NeonColors.cyan.withValues(alpha: 0.15),
-                  border: Border.all(
-                    color: NeonColors.cyan.withValues(alpha: 0.4),
-                    width: 0.8,
+              for (final s in steps)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.only(top: 5),
+                        width: 5,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: s.isError ? AppColors.red : AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          s.text,
+                          style: AppText.body.copyWith(
+                            fontSize: 13,
+                            color: s.isError
+                                ? AppColors.red
+                                : AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: Icon(Icons.auto_awesome,
-                    size: 12, color: NeonColors.cyan),
-              ),
-              const SizedBox(width: 8),
-              Text('Agent Steps',
-                  style: NeonText.mono.copyWith(
-                    fontSize: 11,
-                    color: NeonColors.cyan.withValues(alpha: 0.8),
-                    letterSpacing: 1,
-                  )),
             ],
           ),
-          const SizedBox(height: 8),
-          for (final s in steps)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(top: 4),
-                    width: 4,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: s.isError ? Colors.redAccent : NeonColors.pink,
-                      boxShadow: [
-                        BoxShadow(
-                          color: (s.isError ? Colors.redAccent : NeonColors.pink)
-                              .withValues(alpha: 0.2),
-                          blurRadius: 2,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      s.text,
-                      style: NeonText.body.copyWith(
-                        fontSize: 12,
-                        color: s.isError
-                            ? Colors.redAccent
-                            : Colors.white.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -752,68 +759,46 @@ class _ChatBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accentColor = isError
-        ? Colors.red
-        : isUser
-            ? NeonColors.cyan
-            : NeonColors.purple;
+    final isAI = !isUser && !isError;
 
     final bg = isError
-        ? Colors.red.withValues(alpha: 0.08)
+        ? AppColors.red.withValues(alpha: 0.06)
         : isUser
-            ? NeonColors.cyan.withValues(alpha: 0.08)
-            : NeonColors.purple.withValues(alpha: 0.12);
+            ? AppColors.primary
+            : Colors.transparent;
 
     final fg = isError
-        ? Colors.redAccent
+        ? AppColors.red
         : isUser
-            ? Colors.white.withValues(alpha: 0.95)
-            : Colors.white.withValues(alpha: 0.97);
+            ? Colors.white
+            : AppColors.textPrimary;
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
+        margin: const EdgeInsets.symmetric(vertical: 6),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.82,
+          maxWidth: MediaQuery.of(context).size.width * 0.80,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: isAI
+            ? const EdgeInsets.symmetric(horizontal: 4, vertical: 8)
+            : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(18),
-            topRight: const Radius.circular(18),
-            bottomLeft: isUser
-                ? const Radius.circular(18)
-                : const Radius.circular(4),
-            bottomRight: isUser
-                ? const Radius.circular(4)
-                : const Radius.circular(18),
-          ),
-          border: Border.all(
-            color: accentColor.withValues(alpha: 0.4),
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: accentColor.withValues(alpha: 0.12),
-              blurRadius: 8,
-            ),
-          ],
+          borderRadius: BorderRadius.circular(20),
         ),
         child: text.isEmpty && isStreaming
             ? const TypingDots()
             : SelectableText(
                 text,
-                style: NeonText.body.copyWith(color: fg, fontSize: 15, height: 1.4),
+                style: AppText.body.copyWith(color: fg, fontSize: 15, height: 1.5),
               ),
       ),
     );
   }
 }
 
-/// Three pulsing neon dots shown while the model is "thinking" before the
-/// first token arrives.
+/// Three pulsing dots shown while the model is thinking.
 class TypingDots extends StatefulWidget {
   const TypingDots({super.key});
 
@@ -841,7 +826,7 @@ class _TypingDotsState extends State<TypingDots> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final colors = [NeonColors.cyan, NeonColors.purple, NeonColors.pink];
+    final colors = [AppColors.primary, AppColors.primary, AppColors.primary];
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
@@ -859,14 +844,8 @@ class _TypingDotsState extends State<TypingDots> with TickerProviderStateMixin {
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.5),
+                    color: color.withValues(alpha: 0.4),
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: color.withValues(alpha: 0.2),
-                        blurRadius: 3,
-                      ),
-                    ],
                   ),
                 ),
               ),
@@ -874,6 +853,87 @@ class _TypingDotsState extends State<TypingDots> with TickerProviderStateMixin {
           }),
         );
       },
+    );
+  }
+}
+
+/// Empty-state shown when no messages exist yet.
+/// Displays the Ghostsmart Lottie + a typewriter "How may I help you?".
+class _WelcomeState extends StatefulWidget {
+  const _WelcomeState();
+
+  @override
+  State<_WelcomeState> createState() => _WelcomeStateState();
+}
+
+class _WelcomeStateState extends State<_WelcomeState>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _typeController;
+  static const _fullText = 'How may I help you?';
+
+  @override
+  void initState() {
+    super.initState();
+    _typeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _typeController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Lottie.asset(
+            'assets/Ghostsmart.json',
+            width: 200,
+            height: 200,
+            repeat: true,
+          ),
+          const SizedBox(height: 16),
+          AnimatedBuilder(
+            animation: _typeController,
+            builder: (context, _) {
+              final charCount =
+                  (_typeController.value * _fullText.length).floor();
+              final shown = _fullText.substring(
+                  0, charCount.clamp(0, _fullText.length));
+              final showCursor = _typeController.value < 1.0;
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    shown,
+                    style: AppText.heading.copyWith(
+                      fontSize: 24,
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (showCursor)
+                    Text(
+                      '|',
+                      style: AppText.heading.copyWith(
+                        fontSize: 24,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w300,
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 }

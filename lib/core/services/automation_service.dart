@@ -10,7 +10,6 @@ class AutomationService {
       {'task': task},
     );
   }
-
   static Future<void> stop() async {
     await _channel.invokeMethod('stopAutomation');
   }

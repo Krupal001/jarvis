@@ -34,8 +34,8 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  flutter_gemma: ^1.7.0
-  flutter_gemma_litertlm: ^1.5.3
+  flutter_gemma: ^1.8.2
+  flutter_gemma_litertlm: ^1.6.3
   flutter_gemma_agent: ^0.2.5
   flutter_contacts: ^2.3.1
   permission_handler: ^13.0.1
@@ -75,7 +75,8 @@ flutter:
     - assets/skills/install-app/SKILL.md
     - assets/skills/uninstall-app/SKILL.md
     - assets/skills/device-info/SKILL.md
-    - assets/Atom_Loader.json
+    - assets/animation.json
+    - assets/Ghostsmart.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -26,15 +26,15 @@ class WhatsAppService {
       message: message,
     );
 
-    if (!opened) {
+    if (!opened) { 
       await AutomationService.stop();
       return 'WhatsApp is not installed on this device. '
           'Resolved number for $contactName: $phoneNumber. '
           'Message: "$message"';
     }
 
-    return 'WhatsApp chat opened for $contactName ($phoneNumber). '
-        'Press send to deliver the message.';
+    return 'WhatsApp chat opened for $contactName'
+        'and $message was sent successfully.';
   }
 
   /// Opens WhatsApp's chat screen with the number and message pre-filled.

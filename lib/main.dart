@@ -3,9 +3,9 @@ import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_gemma_demo/chat_screen.dart';
 import 'package:flutter_gemma_demo/core/model_url.dart';
 import 'package:flutter_gemma_demo/core/services/automation_service.dart';
-import 'package:flutter_gemma_demo/ui/neon_background.dart';
-import 'package:flutter_gemma_demo/ui/neon_theme.dart';
-import 'package:flutter_gemma_demo/ui/neon_widgets.dart';
+import 'package:flutter_gemma_demo/ui/app_background.dart';
+import 'package:flutter_gemma_demo/ui/app_theme.dart';
+import 'package:flutter_gemma_demo/ui/app_widgets.dart';
 import 'package:flutter_gemma_litertlm/flutter_gemma_litertlm.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -27,10 +27,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Neon Gemma AI',
-      theme: neonTheme(),
-      darkTheme: neonTheme(),
-      themeMode: ThemeMode.dark,
+      title: 'Gemma AI',
+      theme: appTheme(),
       debugShowCheckedModeBanner: false,
       home: const BootstrapScreen(),
     );
@@ -46,34 +44,25 @@ class BootstrapScreen extends StatefulWidget {
 }
 
 class _BootstrapScreenState extends State<BootstrapScreen>
-    with SingleTickerProviderStateMixin , WidgetsBindingObserver {
+    with WidgetsBindingObserver {
   double? _downloadProgress;
   String _status = 'Checking model...';
   String? _error;
   bool _ready = false;
   bool _needsPermission = false;
-  late final AnimationController _logoController;
 
   @override
   void initState() {
-   
     super.initState();
-     WidgetsBinding.instance.addObserver(this);
-    _logoController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 3),
-    )..repeat(reverse: true);
+    WidgetsBinding.instance.addObserver(this);
     _prepareModel();
     _checkAccessibility();
-    
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _logoController.dispose();
     super.dispose();
-   
   }
 
   @override
@@ -82,7 +71,7 @@ class _BootstrapScreenState extends State<BootstrapScreen>
       _checkAccessibility();
     }
   }
-
+      
 Future<void> _checkAccessibility() async {
   final enabled =
       await AutomationService.isAccessibilityEnabled();
@@ -155,7 +144,7 @@ Future<void> _checkAccessibility() async {
     return Scaffold(
       body: Stack(
         children: [
-          const NeonBackground(),
+          const AppBackground(),
           if (_error != null)
             _buildError()
           else if (_needsPermission)
@@ -178,22 +167,22 @@ Future<void> _checkAccessibility() async {
             _buildLogo(),
             const SizedBox(height: 48),
             if (_downloadProgress != null) ...[
-              NeonProgressRing(progress: _downloadProgress! / 100, size: 140),
+              ProgressRing(progress: _downloadProgress! / 100, size: 140),
               const SizedBox(height: 24),
             ] else ...[
-              const NeonPulseRing(size: 100),
+              const LoadingIndicator(size: 40),
               const SizedBox(height: 24),
             ],
-            NeonShimmerText(
+            Text(
               _status,
-              style: NeonText.heading.copyWith(fontSize: 20),
+              style: AppText.heading.copyWith(fontSize: 18, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 8),
             if (_downloadProgress != null)
               Text(
                 '${_downloadProgress!.toStringAsFixed(1)}%',
-                style: NeonText.mono.copyWith(
-                  color: NeonColors.cyan,
+                style: AppText.mono.copyWith(
+                  color: AppColors.primary,
                   fontSize: 14,
                 ),
               ),
@@ -204,63 +193,41 @@ Future<void> _checkAccessibility() async {
   }
 
   Widget _buildLogo() {
-    return AnimatedBuilder(
-      animation: _logoController,
-      builder: (context, _) {
-        final t = _logoController.value;
-        final glowAlpha = 0.12 + 0.15 * t;
-        return Column(
-          children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: NeonColors.primaryGradient,
-                boxShadow: [
-                  BoxShadow(
-                    color: NeonColors.cyan.withValues(alpha: glowAlpha),
-                    blurRadius: 20 + 10 * t,
-                    spreadRadius: 1,
-                  ),
-                  BoxShadow(
-                    color: NeonColors.purple.withValues(alpha: glowAlpha * 0.6),
-                    blurRadius: 30 + 10 * t,
-                    spreadRadius: 0,
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Icon(
-                  Icons.auto_awesome,
-                  size: 48,
-                  color: Colors.white.withValues(alpha: 0.9),
-                ),
-              ),
+    return Column(
+      children: [
+        Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.primary,
+            boxShadow: AppShadows.elevated(blur: 12, opacity: 0.1),
+          ),
+          child: Center(
+            child: Icon(
+              Icons.auto_awesome,
+              size: 40,
+              color: Colors.white.withValues(alpha: 0.95),
             ),
-            const SizedBox(height: 24),
-            NeonGlowText(
-              'Gemma AI',
-              style: NeonText.headingBold.copyWith(
-                fontSize: 28,
-                color: Colors.white,
-                letterSpacing: 2,
-              ),
-              glowColor: NeonColors.cyan,
-              glowRadius: 8,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'AI POWERED ASSISTANT',
-              style: NeonText.mono.copyWith(
-                color: NeonColors.purple.withValues(alpha: 0.5),
-                fontSize: 11,
-                letterSpacing: 2.5,
-              ),
-            ),
-          ],
-        );
-      },
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'Gemma AI',
+          style: AppText.headingBold.copyWith(
+            fontSize: 26,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'AI Powered Assistant',
+          style: AppText.body.copyWith(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+          ),
+        ),
+      ],
     );
   }
 
@@ -269,8 +236,8 @@ Future<void> _checkAccessibility() async {
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: NeonGlassCard(
-            glowColor: NeonColors.cyan,
+          child: GlassCard(
+            accentColor: AppColors.primary,
             borderRadius: 20,
             child: Padding(
               padding: const EdgeInsets.all(32),
@@ -282,37 +249,35 @@ Future<void> _checkAccessibility() async {
                     height: 72,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: NeonColors.cyan.withValues(alpha: 0.1),
+                      color: AppColors.primary.withValues(alpha: 0.08),
                       border: Border.all(
-                        color: NeonColors.cyan.withValues(alpha: 0.3),
+                        color: AppColors.primary.withValues(alpha: 0.3),
                         width: 1.5,
                       ),
                     ),
                     child: const Icon(Icons.accessibility_new,
-                        size: 36, color: NeonColors.cyan),
+                        size: 36, color: AppColors.primary),
                   ),
                   const SizedBox(height: 20),
-                  NeonGlowText(
+                  Text(
                     'Accessibility Permission',
-                    style: NeonText.headingBold.copyWith(
+                    style: AppText.headingBold.copyWith(
                       fontSize: 20,
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                     ),
-                    glowColor: NeonColors.cyan,
-                    glowRadius: 6,
                   ),
                   const SizedBox(height: 12),
                   Text(
                     'This app needs accessibility permission to automate SMS, WhatsApp, and app installation. Please enable it in system settings.',
                     textAlign: TextAlign.center,
-                    style: NeonText.body.copyWith(
-                      color: Colors.white54,
+                    style: AppText.body.copyWith(
+                      color: AppColors.textSecondary,
                       fontSize: 14,
                     ),
                   ),
                   const SizedBox(height: 28),
-                  NeonButton(
-                    label: 'OPEN SETTINGS',
+                  GlassButton(
+                    label: 'Open Settings',
                     icon: Icons.settings,
                     onPressed: _openAccessibilitySettings,
                   ),
@@ -325,8 +290,8 @@ Future<void> _checkAccessibility() async {
                     },
                     child: Text(
                       'Skip for now',
-                      style: NeonText.body.copyWith(
-                        color: Colors.white38,
+                      style: AppText.body.copyWith(
+                        color: AppColors.textHint,
                         fontSize: 13,
                       ),
                     ),
@@ -345,8 +310,8 @@ Future<void> _checkAccessibility() async {
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: NeonGlassCard(
-            glowColor: Colors.red,
+          child: GlassCard(
+            accentColor: AppColors.red,
             borderRadius: 20,
             child: Padding(
               padding: const EdgeInsets.all(32),
@@ -358,46 +323,37 @@ Future<void> _checkAccessibility() async {
                     height: 72,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.red.withValues(alpha: 0.1),
+                      color: AppColors.red.withValues(alpha: 0.08),
                       border: Border.all(
-                        color: Colors.red.withValues(alpha: 0.4),
+                        color: AppColors.red.withValues(alpha: 0.3),
                         width: 1.5,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.red.withValues(alpha: 0.3),
-                          blurRadius: 20,
-                        ),
-                      ],
                     ),
                     child: const Icon(Icons.error_outline,
-                        size: 36, color: Colors.redAccent),
+                        size: 36, color: AppColors.red),
                   ),
                   const SizedBox(height: 20),
-                  NeonGlowText(
+                  Text(
                     'Setup Failed',
-                    style: NeonText.heading.copyWith(
+                    style: AppText.heading.copyWith(
                       fontSize: 22,
-                      color: Colors.redAccent,
+                      color: AppColors.red,
                     ),
-                    glowColor: Colors.red,
                   ),
                   const SizedBox(height: 12),
                   Text(
                     _error!,
                     textAlign: TextAlign.center,
-                    style: NeonText.body.copyWith(
-                      color: Colors.white54,
+                    style: AppText.body.copyWith(
+                      color: AppColors.textSecondary,
                       fontSize: 14,
                     ),
                   ),
                   const SizedBox(height: 28),
-                  NeonButton(
-                    label: 'RETRY',
+                  GlassButton(
+                    label: 'Retry',
                     icon: Icons.refresh,
-                    gradient: LinearGradient(
-                      colors: [Colors.red.shade700, Colors.red.shade400],
-                    ),
+                    color: AppColors.red,
                     onPressed: () {
                       setState(() {
                         _error = null;
