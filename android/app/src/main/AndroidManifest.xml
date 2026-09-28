@@ -1,45 +1,66 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Permissions for downloading models -->
+    <!-- Permissions (Keep yours exactly as they are) -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <!-- Required on Android 13+ (API 33) for foreground downloads: without a
-         RUNTIME grant, the foreground service does NOT activate. flutter_gemma
-         requests this at runtime automatically before a foreground download. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- Required on Android 14+ (API 34+) for foreground downloads:
-         background_downloader's foreground path runs through WorkManager's
-         SystemForegroundService. On API 34+ startForeground() requires BOTH
-         this permission AND a matching android:foregroundServiceType on the
-         service declaration (see the <service> entry below). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-
-    <!-- SMS / contacts -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.SEND_SMS" />
+    <!-- ADD THIS: Assistants usually need microphone access -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" /> 
 
     <application
         android:label="flutter_gemma_demo"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 
+        <!-- Accessibility Service (Keep yours) -->
         <service
-    android:name=".PlayStoreAccessibilityService"
-    android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
-    android:exported="false">
+            android:name=".PlayStoreAccessibilityService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/play_store_accessibility_service" />
+        </service>
 
-    <intent-filter>
-        <action android:name="android.accessibilityservice.AccessibilityService" />
-    </intent-filter>
+        <!-- 1. Voice Interaction Service (Keep yours) -->
+        <service
+            android:name=".MyVoiceInteractionService"
+            android:permission="android.permission.BIND_VOICE_INTERACTION"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.voice.VoiceInteractionService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.voice_interaction"
+                android:resource="@xml/interaction_service" />
+        </service>
 
-    <meta-data
-        android:name="android.accessibilityservice"
-        android:resource="@xml/play_store_accessibility_service" />
+        <!-- 2. Voice Interaction Session Service (Keep yours) -->
+        <service
+            android:name=".MyVoiceInteractionSessionService"
+            android:permission="android.permission.BIND_VOICE_INTERACTION"
+            android:exported="true" />
 
-</service>
+        <!-- 3. ADDED: Recognition Service (CRITICAL FOR SETTINGS VISIBILITY) -->
+        <service
+            android:name=".MyRecognitionService"
+            android:permission="android.permission.BIND_RECOGNITION_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.speech.RecognitionService" />
+            </intent-filter>
+        </service>
+
+        <!-- Main Activity -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -49,55 +70,64 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
-            <!-- Specifies an Android theme to apply to this Activity as soon as
-                 the Android process has started. This theme is visible to the user
-                 while the Flutter UI initializes. After that, this theme continues
-                 to determine the Window background behind the Flutter UI. -->
+            
             <meta-data
               android:name="io.flutter.embedding.android.NormalTheme"
-              android:resource="@style/NormalTheme"
-              />
+              android:resource="@style/NormalTheme" />
+              
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
 
-        <!-- GPU backend (LiteRT-LM): on Android 12+ the app linker namespace
-             can't dlopen the vendor OpenCL ICD without declaring its loader. -->
+        <!-- Assistant overlay activity: windowIsTranslucent must be in the
+             manifest theme — setTheme() in onCreate is too late. -->
+        <activity
+            android:name=".AssistActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:theme="@style/TransparentAssistantTheme"
+            android:excludeFromRecents="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/TransparentAssistantTheme" />
+
+            <!-- Assist Intent Filter so long-press home launches the overlay -->
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Remainder of your manifest (Native libs, SystemForegroundService, metadata) -->
         <uses-native-library android:name="libvndksupport.so" android:required="false"/>
         <uses-native-library android:name="libOpenCL.so" android:required="false"/>
         <uses-native-library android:name="libOpenCL-car.so" android:required="false"/>
         <uses-native-library android:name="libOpenCL-pixel.so" android:required="false"/>
 
-        <!-- Override WorkManager's shared foreground service to declare a
-             foregroundServiceType (API 34+ requirement — see the
-             FOREGROUND_SERVICE_DATA_SYNC permission comment above).
-             tools:node="merge" merges this attribute onto the
-             background_downloader/WorkManager-provided <service> declaration. -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync"
             tools:node="merge" />
 
-        <!-- Don't delete the meta-data below.
-             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
-    <!-- Required to query activities that can process text, see:
-         https://developer.android.com/training/package-visibility and
-         https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
 
-         In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
-        <!-- Allow url_launcher to resolve the whatsapp:// custom scheme
-             (required on Android 11+ / API 30+ for package visibility). -->
         <intent>
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="whatsapp"/>

@@ -33,7 +33,6 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<AgentStep> _steps = [];
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-
   bool _isInitializing = true;
   bool _isGenerating = false;
   int _generationId = 0;

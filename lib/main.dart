@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_gemma_demo/chat_screen.dart';
 import 'package:flutter_gemma_demo/core/model_url.dart';
@@ -6,38 +7,50 @@ import 'package:flutter_gemma_demo/core/services/automation_service.dart';
 import 'package:flutter_gemma_demo/ui/app_background.dart';
 import 'package:flutter_gemma_demo/ui/app_theme.dart';
 import 'package:flutter_gemma_demo/ui/app_widgets.dart';
+import 'package:flutter_gemma_demo/ui/assistant_screen.dart';
 import 'package:flutter_gemma_litertlm/flutter_gemma_litertlm.dart';
+import 'package:flutter_gemma_speech/flutter_gemma_speech.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  const platform = MethodChannel('com.example.assistant/intent');
   await FlutterGemma.initialize(
-    inferenceEngines: [
+     sttBackends:[LiteRtSttBackend()],
+     ttsBackends:[LiteRtTtsBackend()],
+     inferenceEngines: [
       LiteRtLmEngine(),
     ],
   );
+  
+  String launchType = "DEFAULT";
+  try {
+   launchType = await platform.invokeMethod('getLaunchIntentAction');
+  } catch (e) {
+    print("Failed to get launch intent: $e");
+  }
 
-  runApp(const MyApp());
+  runApp(MyApp(launchType: launchType));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final String launchType;
+  const MyApp({super.key, required this.launchType});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Gemma AI',
-      theme: appTheme(),
+      theme: appTheme(launchType == "ASSIST" ? Colors.transparent : AppColors.bgBase),
       debugShowCheckedModeBanner: false,
-      home: const BootstrapScreen(),
+      home: BootstrapScreen(launchType: launchType),
     );
   }
 }
-
 /// Handles model download (if needed) and then launches the chat screen.
 class BootstrapScreen extends StatefulWidget {
-  const BootstrapScreen({super.key});
+  final String launchType;
+  const BootstrapScreen({super.key, required this.launchType});
 
   @override
   State<BootstrapScreen> createState() => _BootstrapScreenState();
@@ -140,23 +153,27 @@ Future<void> _checkAccessibility() async {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          const AppBackground(),
-          if (_error != null)
-            _buildError()
-          else if (_needsPermission)
-            _buildPermissionRequest()
-          else if (_ready)
-            const ChatScreen()
-          else
-            _buildLoading(),
-        ],
-      ),
-    );
-  }
+Widget build(BuildContext context) {
+  final isAssist = widget.launchType == "ASSIST";
+  return Scaffold(
+    backgroundColor: isAssist ? Colors.transparent : null,
+    body: Stack(
+      children: [
+        if (!isAssist) const AppBackground(),
+        if (_error != null)
+          _buildError()
+        else if (_needsPermission)
+          _buildPermissionRequest()
+        else if (!_ready)
+          _buildLoading()
+        else if (widget.launchType == "ASSIST")
+          const AssistantScreen()
+        else
+          const ChatScreen(),
+      ],
+    ),
+  );
+}
 
   Widget _buildLoading() {
     return SafeArea(

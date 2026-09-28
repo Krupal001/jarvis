@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<voice-interaction-service
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:sessionService="com.example.flutter_gemma_demo.MyVoiceInteractionSessionService"
+    android:recognitionService="com.example.flutter_gemma_demo.MyRecognitionService"
+    android:supportsAssist="true" />

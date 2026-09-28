@@ -103,11 +103,11 @@ class AppText {
 }
 
 /// App-level [ThemeData] with light glassmorphism theme.
-ThemeData appTheme() {
+ThemeData appTheme(Color scaffoldBackgroundColor) {
   return ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
-    scaffoldBackgroundColor: AppColors.bgBase,
+    scaffoldBackgroundColor: scaffoldBackgroundColor,
     colorScheme: ColorScheme.fromSeed(
       seedColor: AppColors.primary,
       brightness: Brightness.light,

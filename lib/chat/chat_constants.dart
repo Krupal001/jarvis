@@ -10,13 +10,13 @@ const chatSystemInstruction =
 const List<Tool> chatTools = [
   Tool(
     name: 'send_sms',
-    description: 'Send an SMS message to a contact by name.',
+    description: 'Send an SMS message to a contact by name or phone number.',
     parameters: {
       'type': 'object',
       'properties': {
         'contactName': {
           'type': 'string',
-          'description': 'Full name of the contact to send the SMS to.',
+          'description': 'Full name of the contact, or a raw phone number (e.g. +919876543210) if the user gives one.',
         },
         'message': {
           'type': 'string',
@@ -28,13 +28,13 @@ const List<Tool> chatTools = [
   ),
   Tool(
     name: 'send_whatsapp',
-    description: 'Send a WhatsApp message to a contact by name.',
+    description: 'Send a WhatsApp message to a contact by name or phone number.',
     parameters: {
       'type': 'object',
       'properties': {
         'contactName': {
           'type': 'string',
-          'description': 'Full name of the contact to send the WhatsApp message to.',
+          'description': 'Full name of the contact, or a raw phone number (e.g. +919876543210) if the user gives one.',
         },
         'message': {
           'type': 'string',

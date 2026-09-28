@@ -25,6 +25,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.13.1"
+  audio_waveforms:
+    dependency: "direct main"
+    description:
+      name: audio_waveforms
+      sha256: "03b3430ecf430a2e90185518a228c02be3d26653c62dd931e50d671213a6dbc8"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.2"
   background_downloader:
     dependency: transitive
     description:
@@ -97,14 +105,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.9"
-  dart_sentencepiece_tokenizer:
-    dependency: transitive
-    description:
-      name: dart_sentencepiece_tokenizer
-      sha256: "85825632845cf6427ea0cd13dfba96b4341cf63525165155e5b9b97011239289"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.3.2"
   decimal:
     dependency: transitive
     description:
@@ -186,26 +186,26 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_gemma
-      sha256: e8634024a95d7a7f8edbf34ae8ab049bcb7cb75c913b74e3d4b3480d3b12f097
+      sha256: "65f21711fb710a6086a5e46b34b07368b3d539cf5709f75a2ce8b22526d63122"
       url: "https://pub.dev"
     source: hosted
-    version: "1.8.2"
-  flutter_gemma_embeddings:
-    dependency: transitive
-    description:
-      name: flutter_gemma_embeddings
-      sha256: e2662743cc296a6fe1483677937ab3c77b141b028db5392d71e6c82292e37804
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.0.0"
+    version: "1.11.0"
   flutter_gemma_litertlm:
     dependency: "direct main"
     description:
       name: flutter_gemma_litertlm
-      sha256: "6926612c00ade0e5c79b66a92d302567565991901596c0baddd03be98d711f89"
+      sha256: d1a40aa78893672e3c99ad65a710b238eea3499144dadd5e8bdd696529144cd9
       url: "https://pub.dev"
     source: hosted
-    version: "1.6.3"
+    version: "1.8.4"
+  flutter_gemma_speech:
+    dependency: "direct main"
+    description:
+      name: flutter_gemma_speech
+      sha256: "867974123632dd5d68b1b00dcda539ef433d8f6b8d15392f07523bf8d3abe225"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.5.2"
   flutter_lints:
     dependency: "direct dev"
     description:
@@ -893,6 +893,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.4"
+  zo_animated_border:
+    dependency: "direct main"
+    description:
+      name: zo_animated_border
+      sha256: "6b35f0c15ae7f4382af4d5c709ff991ad24d96854205ab9ca67b51f42e44ef58"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.0"
 sdks:
   dart: ">=3.13.0 <4.0.0"
   flutter: ">=3.44.0"

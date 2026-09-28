@@ -10,15 +10,17 @@ class AutomationService {
       {'task': task},
     );
   }
+
   static Future<void> stop() async {
     await _channel.invokeMethod('stopAutomation');
   }
+
 
   static Future<void> openAccessibilitySettings() async {
     await _channel.invokeMethod('openAccessibilitySettings');
   }
 
-  static Future<bool> isAccessibilityEnabled() async {
+static Future<bool> isAccessibilityEnabled() async {
     return await _channel.invokeMethod<bool>(
           'checkAccessibilityEnabled',
         ) ??

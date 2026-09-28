@@ -14,8 +14,10 @@ class WhatsAppService {
     required String contactName,
     required String message,
   }) async {
-    final phoneNumber =
-        await contactService.findPhoneNumber(contactName);
+    // If the caller passed a raw number instead of a name, use it directly.
+    final phoneNumber = isPhoneNumber(contactName)
+        ? contactName.trim()
+        : await contactService.findPhoneNumber(contactName);
     if (phoneNumber == null) {
       return 'Could not find a phone number for $contactName.';
     }
