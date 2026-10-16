@@ -34,9 +34,8 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  flutter_gemma: ^1.8.2
-  flutter_gemma_litertlm: ^1.6.3
-  flutter_gemma_agent: ^0.2.5
+  flutter_gemma: ^1.11.0
+  flutter_gemma_litertlm: ^1.8.4
   flutter_contacts: ^2.3.1
   permission_handler: ^13.0.1
   url_launcher: ^6.3.2
@@ -45,6 +44,13 @@ dependencies:
   google_fonts: ^6.2.1
   installed_apps: ^2.1.1
   flutter_device_info_plus: ^0.7.1
+  gpt_markdown: ^1.2.1
+  flutter_gemma_speech: ^0.5.2
+  zo_animated_border: ^1.1.0
+  audio_waveforms: ^2.0.2
+  record: ^7.1.1
+  glow_container: ^1.1.0
+ 
 
 dev_dependencies:
   flutter_test:
@@ -70,11 +76,6 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/skills/send-sms/SKILL.md
-    - assets/skills/send-whatsapp/SKILL.md
-    - assets/skills/install-app/SKILL.md
-    - assets/skills/uninstall-app/SKILL.md
-    - assets/skills/device-info/SKILL.md
     - assets/animation.json
     - assets/Ghostsmart.json
 

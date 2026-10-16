@@ -9,13 +9,15 @@ class SmsService {
   SmsService({
     required this.contactService,
   });
-
+ 
   Future<String> sendSmsToContact({
     required String contactName,
     required String message,
   }) async {
-    final phoneNumber =
-        await contactService.findPhoneNumber(contactName);
+    // If the caller passed a raw number instead of a name, use it directly.
+    final phoneNumber = isPhoneNumber(contactName)
+        ? contactName.trim()
+        : await contactService.findPhoneNumber(contactName);
 
     if (phoneNumber == null) {
       return 'Could not find a phone number for $contactName.';
@@ -37,7 +39,7 @@ class SmsService {
     required String message,
   }) async {
     final uri = Uri(
-      scheme: 'sms',
+      scheme: 'sms', 
       path: phoneNumber,
       query: _encodeQuery({'body': message}),
     );
