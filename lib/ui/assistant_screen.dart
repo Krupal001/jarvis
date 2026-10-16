@@ -1,8 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:flutter_gemma/core/api/flutter_gemma.dart';
 import 'package:flutter_gemma/core/model_management/model_specs.dart';
+import 'package:flutter_gemma/flutter_gemma_interface.dart';
+import 'package:record/record.dart';
 import 'package:zo_animated_border/zo_animated_border.dart';
 import 'dart:ui' as ui show Gradient;
 
@@ -22,7 +26,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
   String _status = 'Checking model...';
   String? _error;
   bool _ready = false;
-
+final AudioRecorder _recorder = AudioRecorder();
+SpeechRecognizer? _recognizer;
   Future<void> _prepareModel() async {
     try {
       final isInstalled = await FlutterGemma.isModelInstalled('moonshine_tiny_5s_f32.tflite');
@@ -45,7 +50,10 @@ class _AssistantScreenState extends State<AssistantScreen> {
           })
           .install();
 
+         
       }
+       _recognizer = await FlutterGemma.getActiveStt();
+
 
       if (!mounted) return;
       setState(() {
@@ -60,25 +68,82 @@ class _AssistantScreenState extends State<AssistantScreen> {
         _downloadProgressssTokenizer = null;
       });
     }
-    final recognizer = await FlutterGemma.getActiveStt();
-
-// pcm: 16 kHz mono 16-bit little-endian PCM bytes (Uint8List) — e.g. the data
-// chunk of a WAV, or frames from a recorder. moonshine-tiny handles up to ~5 s.
-final transcript = await recognizer.transcribe(pcm);
-print(transcript); // "She had ... watch for all year."
-
-await recognizer.close();
 
   }
+Future<void> startRecording() async {
+  if (!await _recorder.hasPermission()) {
+    return;
+  }
 
+  final path = '${Directory.systemTemp.path}/recording.wav';
+
+  await _recorder.start(
+    const RecordConfig(
+      encoder: AudioEncoder.wav,
+      sampleRate: 16000,
+      numChannels: 1,
+    ),
+    path: path,
+  );
+}
+
+Uint8List extractPcmFromWav(Uint8List wavBytes) {
+  // Standard WAV header is usually 44 bytes.
+  // Find the "data" chunk instead of assuming 44 bytes,
+  // because WAV headers can vary.
+
+  for (int i = 12; i < wavBytes.length - 8; i++) {
+    if (wavBytes[i] == 0x64 && // d
+        wavBytes[i + 1] == 0x61 && // a
+        wavBytes[i + 2] == 0x74 && // t
+        wavBytes[i + 3] == 0x61) { // a
+
+      final dataSize =
+          wavBytes[i + 4] |
+          (wavBytes[i + 5] << 8) |
+          (wavBytes[i + 6] << 16) |
+          (wavBytes[i + 7] << 24);
+
+      final dataStart = i + 8;
+      final dataEnd = dataStart + dataSize;
+
+      return Uint8List.fromList(
+        wavBytes.sublist(
+          dataStart,
+          dataEnd > wavBytes.length ? wavBytes.length : dataEnd,
+        ),
+      );
+    }
+  }
+
+  throw Exception('Invalid WAV: PCM data chunk not found');
+}
+
+Future<void> stopRecording() async {
+  final path = await _recorder.stop();
+
+  if (path == null) return;
+
+  final wavBytes = await File(path).readAsBytes();
+
+  // Extract PCM from WAV here.
+  final Uint8List pcm16kMono = extractPcmFromWav(wavBytes);
+
+  final text = await _recognizer!.transcribe(pcm16kMono);
+
+  print('TRANSCRIPT: $text');
+}
   @override
   void initState() {
+    _prepareModel();
     super.initState();
   }
+  
 
   Future<void> _toggleVoiceRecording() async {
   if (_isVoiceMode) {
     await _recorderController.stop();
+    await stopRecording();
 
     if (!mounted) return;
 
@@ -86,6 +151,7 @@ await recognizer.close();
       _isVoiceMode = false;
     });
   } else {
+    await startRecording();
     await _recorderController.record();
 
     if (!mounted) return;
@@ -96,12 +162,13 @@ await recognizer.close();
   }
 }
 
-  @override
-  void dispose() {
-    _textController.dispose();
-    _recorderController.dispose();
-    super.dispose();
-  }
+@override
+void dispose() {
+  _textController.dispose();
+  _recorderController.dispose();
+  _recorder.dispose();
+  super.dispose();
+}
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +200,9 @@ await recognizer.close();
                 ),
                 child: GestureDetector(
                   onTap: () {},
-                  child: _buildGeminiInputBar(),
+                  child: !_ready
+                      ? _buildDownloadOverlay()
+                      : _buildGeminiInputBar(),
                 ),
               ),
             ),
@@ -245,4 +314,82 @@ await recognizer.close();
       ),
     );
   }
+  Widget _buildDownloadOverlay() {
+  final modelProgress = _downloadProgresssstMOdel ?? 0;
+  final tokenizerProgress = _downloadProgressssTokenizer ?? 0;
+
+  return Center(
+    child: Container(
+      margin: const EdgeInsets.symmetric(horizontal: 32),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A2E).withValues(alpha: 0.94),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.auto_awesome,
+            color: Colors.blueAccent,
+            size: 32,
+          ),
+
+          const SizedBox(height: 16),
+
+          const Text(
+            'Preparing Assistant',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          Text(
+            'Downloading speech model...',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.6),
+              fontSize: 14,
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          LinearProgressIndicator(
+            value: modelProgress / 100,
+            minHeight: 5,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              '${modelProgress.toStringAsFixed(0)}%',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          Text(
+            'Tokenizer ${tokenizerProgress.toStringAsFixed(0)}%',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.45),
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 }

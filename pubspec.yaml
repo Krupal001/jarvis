@@ -48,6 +48,9 @@ dependencies:
   flutter_gemma_speech: ^0.5.2
   zo_animated_border: ^1.1.0
   audio_waveforms: ^2.0.2
+  record: ^7.1.1
+  glow_container: ^1.1.0
+ 
 
 dev_dependencies:
   flutter_test:
